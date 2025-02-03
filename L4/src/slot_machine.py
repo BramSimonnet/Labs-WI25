@@ -68,6 +68,21 @@ def main(epsilon: float = 0.1, mode: str = "manual"):
 
             # TODO: calculate the reward and update the total reward
 
+            chosen_machine = epsilon_greedy(estimated_rewards, epsilon)
+
+            reward = np.random.rand() < true_rewards_probabilities[chosen_machine]
+            play_counts[chosen_machine] += 1
+            estimated_rewards[chosen_machine] += (reward - estimated_rewards[chosen_machine]) / play_counts[chosen_machine]
+            total_reward += reward - cost_per_play 
+
+            chosen_image = pygame.image.load("pull.jpg")
+            chosen_image = pygame.transform.scale(chosen_image, (50, 50))
+            chosen_x = start_x + chosen_machine * (button_width + button_margin) + button_width / 2 - 25
+            chosen_y = (screen_height + button_height) / 2 + 20
+            screen.blit(chosen_image, (chosen_x, chosen_y))
+
+            pygame.time.wait(100)  
+
             # Add a small delay to see the AI in action
             # Draw the selected machine's picture in AI mode
             chosen_image = pygame.image.load("pull.jpg")
