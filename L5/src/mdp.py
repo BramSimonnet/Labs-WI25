@@ -21,16 +21,15 @@ def transition(state, action):
     Returns:
     int: The next state.
     """
-    # TODO: Your code here
-    if action == 'left':
-        return max(1, state - 1)  # Move left, but ensure state doesn't go below 1
-    elif action == 'stay':
-        return state  # Stay in the current state
-    elif action == 'right':
-        return min(5, state + 1)  # Move right, but ensure state doesn't exceed 5
-    else:
-        raise ValueError(f"Invalid action: {action}")
-
+    if action == "stay":
+            return state
+    if action == "left":
+        if state in [2,3,4,5]:
+            state = state - 1
+    if action == 'right': 
+        if state in [1,2,3,4]:
+            state += 1
+    return state
 
 
 def reward(state, action):
