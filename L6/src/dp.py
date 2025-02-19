@@ -1,5 +1,9 @@
+#some assistance from chat gpt
+
 from tqdm import tqdm
 from .blackjack import BlackjackEnv, Hand, Card
+from collections import defaultdict
+
 
 ACTIONS = ['hit', 'stick']
 
@@ -9,18 +13,32 @@ def policy_evaluation(env, V, policy, episodes=500000, gamma=1.0):
     - Generate episodes using the current policy
     - Update state value function as an average return
     """
-    # TODO:
-    # track number of visits to each state and track sum of returns for each state
-    # TODO:
-    # Initialize returns_sum and returns_count
+    returns_sum = defaultdict(float)
+    returns_count = defaultdict(int) 
 
     for _ in tqdm(range(episodes), desc="Policy evaluation"):
-        ...
-        # Generate one episode
-        # TODO:...
-        # First-visit Monte Carlo: Update returns for the first occurrence of each state
-            # Compute return from the first visit onward
-                # TODO # Update returns_sum and returns_count
+        episode = []
+        state = env.reset()
+        done = False
 
-    # Update V(s) as the average return
-    ... # TODO
+        while not done:
+            action = policy[state] 
+            next_state, reward, done = env.step(action)
+            episode.append((state, reward))
+            state = next_state
+
+        visited_states = set()
+        G = 0  
+
+        for t in reversed(range(len(episode))):  
+            state, reward = episode[t]
+            G = gamma * G + reward 
+
+            if state not in visited_states:
+                returns_sum[state] += G
+                returns_count[state] += 1
+                V[state] = returns_sum[state] / returns_count[state]  
+                visited_states.add(state)  
+
+    return V
+

@@ -1,3 +1,5 @@
+#some assistance from chat gpt
+
 import matplotlib.pyplot as plt
 import random
 import math
@@ -13,17 +15,28 @@ def estimate_pi(num_samples: int, step: int = 100):
     Returns:
         list: A list of tuples containing the following data: x_inside, y_inside, x_outside, y_outside, pi_estimate.
     """
-    # TODO:
-    # 1. Initialize a counter for points inside the circle,
-    #    lists for x_inside, y_inside, x_outside, y_outside, and an empty data list.
-    # 2. Loop through num_samples iterations:
-    #     a. Generate a random point (x, y) with values uniformly drawn from [-1, 1].
-    #     b. Check if the point is inside the unit circle (x**2 + y**2 <= 1).
-    #     c. If it is, update the counter and append the point to the inside lists; otherwise, append it to the outside lists.
-    #     d. After every 'step' samples, compute the current estimate of Pi (4 * inside_count / total_samples)
-    #        and append a tuple (x_inside.copy(), y_inside.copy(), x_outside.copy(), y_outside.copy(), pi_estimate) to data.
-    # 3. Return the data list when complete.
-    pass
+    inside_count = 0
+    x_inside, y_inside = [], []
+    x_outside, y_outside = [], []
+    data = []
+
+    for i in range(1, num_samples + 1):
+      
+        x, y = random.uniform(-1, 1), random.uniform(-1, 1)
+
+        if x**2 + y**2 <= 1:
+            inside_count += 1
+            x_inside.append(x)
+            y_inside.append(y)
+        else:
+            x_outside.append(x)
+            y_outside.append(y)
+
+        if i % step == 0 or i == num_samples:
+            pi_estimate = 4 * inside_count / i
+            data.append((x_inside.copy(), y_inside.copy(), x_outside.copy(), y_outside.copy(), pi_estimate))
+
+    return data
 
 def create_animation_pi(num_samples: int, step:int=100, filename: str='monte_carlo_pi.gif'):
     """
