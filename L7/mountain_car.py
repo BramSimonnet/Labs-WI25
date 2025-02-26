@@ -1,3 +1,5 @@
+# some assistance from chat gpt
+
 import gymnasium as gym
 import numpy as np
 import matplotlib.pyplot as plt
@@ -58,71 +60,88 @@ def discretize(state, tile_coder):
 def q_learning(env, num_episodes, alpha, gamma, epsilon, tile_coder):
     q_table = create_q_table(env.action_space.n, tile_coder)
 
+    # TODO: Implement Q-learning algorithm
+    # This will be slightly different from the WindyCliffWorld environment, in that the state is continuous
+    # and you are using the tile coder to discretize the state space.
+
     for episode in range(num_episodes):
         state, _ = env.reset()
         done = False
 
         while not done:
-            tile_indices = discretize(state, tile_coder)  # Convert state into tile indices
-            
-            # Choose action using ε-greedy policy
+            tile_indices = discretize(state, tile_coder) 
+    
             if np.random.rand() < epsilon:
-                action = env.action_space.sample()  # Exploration
+                action = env.action_space.sample()  
             else:
                 q_values = get_q_values(q_table, tile_indices)
-                action = np.argmax(q_values)  # Exploitation
+                action = np.argmax(q_values) 
             
-            # Take action, observe new state and reward
+           
             next_state, reward, done, _, _ = env.step(action)
             next_tile_indices = discretize(next_state, tile_coder)
 
-            # Q-learning update (off-policy)
             q_values_next = get_q_values(q_table, next_tile_indices)
-            best_next_action = np.max(q_values_next)
+            best_next_action = np.max(q_values_next) 
 
             for idx in tile_indices:
                 q_table[idx][action] += alpha * (reward + gamma * best_next_action - q_table[idx][action])
 
-            state = next_state  # Move to the next state
+            state = next_state 
+
+        if episode % 50 == 0:
+            print(f"Episode {episode}: Q-table Min={np.min(q_table)}, Max={np.max(q_table)}")
 
     return q_table
-
-
 
 def sarsa(env, num_episodes, alpha, gamma, epsilon, tile_coder):
     q_table = create_q_table(env.action_space.n, tile_coder)
 
+   # TODO: Implement SARSA algorithm
+   # This will be slightly different from the WindyCliffWorld environment, in that the state is continuous
+    # and you are using the tile coder to discretize the state space.
+
+    max_steps = 500  
+
     for episode in range(num_episodes):
         state, _ = env.reset()
-        done = False
-
         tile_indices = discretize(state, tile_coder)
+
+
         if np.random.rand() < epsilon:
-            action = env.action_space.sample()  # Exploration
+            action = env.action_space.sample() 
         else:
             q_values = get_q_values(q_table, tile_indices)
-            action = np.argmax(q_values)  # Exploitation
+            action = np.argmax(q_values) 
 
-        while not done:
+        total_reward = 0  
+        for step in range(max_steps):  
             next_state, reward, done, _, _ = env.step(action)
             next_tile_indices = discretize(next_state, tile_coder)
+            total_reward += reward
 
-            # Select next action using ε-greedy policy
             if np.random.rand() < epsilon:
-                next_action = env.action_space.sample()  # Exploration
+                next_action = env.action_space.sample() 
             else:
                 q_values_next = get_q_values(q_table, next_tile_indices)
-                next_action = np.argmax(q_values_next)  # Exploitation
+                next_action = np.argmax(q_values_next)  
 
-            # SARSA update (on-policy)
+
+            q_next = get_q_values(q_table, next_tile_indices)[next_action]
             for idx in tile_indices:
-                q_table[idx][action] += alpha * (reward + gamma * q_table[next_tile_indices[0]][next_action] - q_table[idx][action])
+                q_table[idx][action] += alpha * (reward + gamma * q_next - q_table[idx][action])
 
             state = next_state
-            action = next_action  # Update action for next iteration
+            tile_indices = next_tile_indices 
+            action = next_action 
+
+            if done: 
+                break
+        
+        if episode % 50 == 0:
+            print(f"Episode {episode} | Steps: {step} | Reward: {total_reward} | Q-table Max: {np.max(q_table):.3f} Min: {np.min(q_table):.3f}")
 
     return q_table
-
 
 
 def visualize_policy(env, q_table, tile_coder, video_dir, filename='q_learning'):

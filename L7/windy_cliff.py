@@ -1,3 +1,4 @@
+#some assistance from chat gpt
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
@@ -21,7 +22,7 @@ class WindyCliffWorld(gym.Env):
             (i, j): np.random.choice([-1, 0, 1]) for i in range(self.grid_size[0]) for j in range(self.grid_size[1])
         }
 
-        self.action_space = spaces.Discrete(4)  # 4 possible actions: up, down, left, right
+        self.action_space = spaces.Discrete(4)  # Up, Down, Left, Right
         self.observation_space = spaces.Discrete(self.grid_size[0] * self.grid_size[1])
         
         self.state = self.start_state
@@ -71,124 +72,94 @@ class WindyCliffWorld(gym.Env):
     
     def render(self):
         grid = np.zeros(self.grid_size)
-        grid[self.state] = 1  # Current position
+        grid[self.state] = 1
         for c in self.cliff:
-            grid[c] = -1  # Cliff positions
+            grid[c] = -1  
         for o in self.obstacles:
-            grid[o] = -0.5  # Obstacle positions
-        grid[self.goal_state] = 2  # Goal position
+            grid[o] = -0.5  
+        grid[self.goal_state] = 2  
         fig = plt.figure(figsize=(6, 6))
         plt.imshow(grid, cmap='viridis')
         plt.axis('off')
         fig.canvas.draw()
         plt.close(fig)
-        image = np.array(fig.canvas.renderer.buffer_rgba())
-        return image
-
-# Create and register the environment
-env = WindyCliffWorld()
+        return np.array(fig.canvas.renderer.buffer_rgba())
 
 def q_learning(env, num_episodes, alpha, gamma, epsilon):
-    q_table = np.zeros((env.observation_space.n, env.action_space.n))
-    
-    for episode in range(num_episodes):
-        state = env.reset()  # `reset()` already returns an integer
-        done = False
-
-        while not done:
-            if np.random.rand() < epsilon:
-                action = env.action_space.sample()  # Explore
-            else:
-                action = np.argmax(q_table[state])  # Exploit
-
-            next_state, reward, done, _ = env.step(action)  # Returns integer already
-
-            # Q-learning update rule
-            best_next_action = np.max(q_table[next_state])
-            q_table[state, action] += alpha * (reward + gamma * best_next_action - q_table[state, action])
-
-            state = next_state  # Move to next state
-
-    return q_table
-
-
-
-def sarsa(env, num_episodes, alpha, gamma, epsilon):
-    q_table = np.zeros((env.observation_space.n, env.action_space.n))  # Initialize Q-table
-    rewards_per_episode = []  # Track total rewards per episode
+    q_table = np.zeros([env.observation_space.n, env.action_space.n])
+    rewards_per_episode = []
 
     for episode in range(num_episodes):
-        state = env.reset()  # Reset environment
+        state = env.reset()
         done = False
         total_reward = 0
+        steps = 0  
 
-        # Choose first action using ε-greedy policy
-        if np.random.rand() < epsilon:
-            action = env.action_space.sample()  # Explore
-        else:
-            action = np.argmax(q_table[state])  # Exploit
-
-        while not done:
+        while not done and steps < 1000:  
+            action = env.action_space.sample() if np.random.rand() < epsilon else np.argmax(q_table[state])
             next_state, reward, done, _ = env.step(action)
             total_reward += reward
 
-            # Choose next action using ε-greedy policy
-            if np.random.rand() < epsilon:
-                next_action = env.action_space.sample()  # Explore
-            else:
-                next_action = np.argmax(q_table[next_state])  # Exploit
+            best_next_action = np.max(q_table[next_state])
+            q_table[state, action] += alpha * (reward + gamma * best_next_action - q_table[state, action])
 
-            # SARSA update rule (on-policy)
-            q_table[state, action] += alpha * (reward + gamma * q_table[next_state, next_action] - q_table[state, action])
-
-            state, action = next_state, next_action  # Move to next state-action pair
+            state = next_state
+            steps += 1  
 
         rewards_per_episode.append(total_reward)
 
     return q_table, rewards_per_episode
 
+def sarsa(env, num_episodes, alpha, gamma, epsilon):
+    q_table = np.zeros([env.observation_space.n, env.action_space.n])
+    rewards_per_episode = []
 
+    for episode in range(num_episodes):
+        state = env.reset()
+        done = False
+        total_reward = 0
+        action = env.action_space.sample() if np.random.rand() < epsilon else np.argmax(q_table[state])
+        steps = 0  
 
-def save_gif(frames, path='./', filename='gym_animation.gif'):
-    imageio.mimsave(os.path.join(path, filename), frames, duration=0.5)
+        while not done and steps < 1000:  
+            next_state, reward, done, _ = env.step(action)
+            total_reward += reward
 
-def visualize_policy(env, q_table, filename='q_learning_windy_cliff.gif'):
-    state = env.reset()  # Already an integer, no need for conversion
+            next_action = env.action_space.sample() if np.random.rand() < epsilon else np.argmax(q_table[next_state])
+            q_table[state, action] += alpha * (reward + gamma * q_table[next_state, next_action] - q_table[state, action])
+
+            state, action = next_state, next_action
+            steps += 1  
+
+        rewards_per_episode.append(total_reward)
+
+    return q_table, rewards_per_episode
+
+def visualize_policy(env, q_table, filename):
+    state = env.reset()
     frames = []
     done = False
 
     while not done:
-        action = np.argmax(q_table[state])  # Select the best action
-        next_state, _, done, _ = env.step(action)
+        action = np.argmax(q_table[state])
+        state, _, done, _ = env.step(action)
         frames.append(env.render())
 
-        state = next_state  # Move to next state (already an integer)
+    imageio.mimsave(os.path.join('./', filename), frames, duration=0.5)
 
-    save_gif(frames, filename=filename)
-
-
-
-# Example usage:
-
-# Testing Q-Learning
 env = WindyCliffWorld()
-q_table = q_learning(env, num_episodes=500, alpha=0.1, gamma=0.99, epsilon=0.1)
+q_table, _ = q_learning(env, num_episodes=500, alpha=0.1, gamma=0.99, epsilon=0.1)
 visualize_policy(env, q_table, filename='q_learning_windy_cliff.gif')
 
-# Testing SARSA
-env = WindyCliffWorld()
-q_table = sarsa(env, num_episodes=500, alpha=0.1, gamma=0.99, epsilon=0.1)
+q_table, _ = sarsa(env, num_episodes=500, alpha=0.1, gamma=0.99, epsilon=0.1)
 visualize_policy(env, q_table, filename='sarsa_windy_cliff.gif')
 
-# TODO: Run experiments with different hyperparameters and visualize the results
-# You should generate two plots:
-# 1. Total reward over episodes for different α and ε values for Q-learning
-# 2. Total reward over episodes for different α and ε values for SARSA
-# For each plot, use at least 2 different values for α and 2 different values for ε
-
-def plot_learning_curve(rewards, title, filename):
-    plt.figure(figsize=(10,5))
-    plt.plot(rewards, label="Total Reward per Episode")
+def plot_learning_curve(rewards_dict, title, filename):
+    plt.figure(figsize=(10, 5))
+    
+    for key, rewards in rewards_dict.items():
+        plt.plot(rewards, label=key)
+    
     plt.xlabel("Episodes")
     plt.ylabel("Total Reward")
     plt.title(title)
@@ -196,13 +167,24 @@ def plot_learning_curve(rewards, title, filename):
     plt.savefig(filename)
     plt.show()
 
-# Running Q-Learning
-q_table_q, rewards_per_episode_q = q_learning(env, num_episodes=500, alpha=0.1, gamma=0.99, epsilon=0.1)
+alphas = [0.1, 0.5]
+epsilons = [0.1, 0.5]
+num_episodes = 500
+gamma = 0.99
 
-# Running SARSA
-q_table_sarsa, rewards_per_episode_sarsa = sarsa(env, num_episodes=500, alpha=0.1, gamma=0.99, epsilon=0.1)
+q_rewards_dict = {}
+for alpha in alphas:
+    for epsilon in epsilons:
+        _, rewards = q_learning(env, num_episodes, alpha, gamma, epsilon)
+        q_rewards_dict[f"α={alpha}, ε={epsilon}"] = rewards
 
-# Plot Learning Curves
-plot_learning_curve(rewards_per_episode_q, "Q-Learning Performance", "q_learning_rewards.png")
-plot_learning_curve(rewards_per_episode_sarsa, "SARSA Performance", "sarsa_rewards.png")
+sarsa_rewards_dict = {}
+for alpha in alphas:
+    for epsilon in epsilons:
+        _, rewards = sarsa(env, num_episodes, alpha, gamma, epsilon)
+        sarsa_rewards_dict[f"α={alpha}, ε={epsilon}"] = rewards
+
+# plot
+plot_learning_curve(q_rewards_dict, "Q-Learning Performance", "q_learning_windy_cliff_hyperparameters.png")
+plot_learning_curve(sarsa_rewards_dict, "SARSA Performance", "sarsa_windy_cliff_hyperparameters.png")
 
